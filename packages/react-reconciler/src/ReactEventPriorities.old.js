@@ -13,11 +13,12 @@ import {
   NoLane,
   SyncLane,
   InputContinuousLane,
-  DefaultLane,
   IdleLane,
   getHighestPriorityLane,
   includesNonIdleWork,
+  DefaultLane,
 } from './ReactFiberLane.old';
+import {enableUnifiedSyncLane} from '../../shared/ReactFeatureFlags';
 
 // TODO: Ideally this would be opaque but that doesn't work well with
 // our reconciler fork infra, since these leak into non-reconciler packages.
@@ -70,10 +71,13 @@ export function isHigherEventPriority(
   return a !== 0 && a < b;
 }
 
-export function lanesToEventPriority(lanes: Lanes): EventPriority {
+export function lanesToEventPriority(
+  lanes: Lanes,
+  syncUpdatePriority: EventPriority,
+): EventPriority {
   const lane = getHighestPriorityLane(lanes);
   if (!isHigherEventPriority(DiscreteEventPriority, lane)) {
-    return DiscreteEventPriority;
+    return enableUnifiedSyncLane ? syncUpdatePriority : DiscreteEventPriority;
   }
   if (!isHigherEventPriority(ContinuousEventPriority, lane)) {
     return ContinuousEventPriority;
@@ -84,8 +88,14 @@ export function lanesToEventPriority(lanes: Lanes): EventPriority {
   return IdleEventPriority;
 }
 
-export function laneToEventPriority(lane: Lane): EventPriority {
-  if (lane === DefaultLane) {
+export function laneToEventPriority(
+  lane: Lane,
+  syncUpdatePriority: EventPriority,
+): EventPriority {
+  if (enableUnifiedSyncLane && lane === SyncLane) {
+    return syncUpdatePriority;
+  }
+  if (!enableUnifiedSyncLane && lane === DefaultLane) {
     return DefaultEventPriority;
   }
   if (lane === InputContinuousLane) {

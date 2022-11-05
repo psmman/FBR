@@ -41,6 +41,7 @@ import {
   enableCache,
   enableTransitionTracing,
   enableFrameEndScheduling,
+  enableUnifiedSyncLane,
   useModernStrictMode,
 } from 'shared/ReactFeatureFlags';
 import ReactSharedInternals from 'shared/ReactSharedInternals';
@@ -613,7 +614,6 @@ export function requestUpdateLane_getUpdatePriority(): EventPriority {
 }
 
 export function requestUpdateLane(fiber: Fiber): Lane {
-  currentUpdatePriority = NoEventPriority;
   // Special cases
   const mode = fiber.mode;
   if ((mode & ConcurrentMode) === NoMode) {
@@ -633,7 +633,11 @@ export function requestUpdateLane(fiber: Fiber): Lane {
     // This behavior is only a fallback. The flag only exists until we can roll
     // out the setState warning, since existing code might accidentally rely on
     // the current behavior.
-    return pickArbitraryLane(workInProgressRootRenderLanes);
+    const nextLane = pickArbitraryLane(workInProgressRootRenderLanes);
+    if ((nextLane & SyncLane) === NoLane) {
+      currentUpdatePriority = NoEventPriority;
+    }
+    return nextLane;
   }
 
   const isTransition = requestCurrentTransition() !== NoTransition;
@@ -657,6 +661,10 @@ export function requestUpdateLane(fiber: Fiber): Lane {
       // All transitions within the same event are assigned the same lane.
       currentEventTransitionLane = claimNextTransitionLane();
     }
+    if ((currentEventTransitionLane & SyncLane) === NoLane) {
+      currentUpdatePriority = NoEventPriority;
+    }
+
     return currentEventTransitionLane;
   }
 
@@ -665,10 +673,10 @@ export function requestUpdateLane(fiber: Fiber): Lane {
   //
   // TODO: Move this type conversion to the event priority module.
   const updatePriority = getCurrentUpdatePriority();
+  currentUpdatePriority = updatePriority;
   if (updatePriority !== NoEventPriority) {
-    currentUpdatePriority = updatePriority;
     if (updatePriority === DefaultEventPriority) {
-      return DefaultLane;
+      return enableUnifiedSyncLane ? SyncLane : DefaultLane;
     }
     if (updatePriority === ContinuousEventPriority) {
       return InputContinuousLane;
@@ -683,7 +691,7 @@ export function requestUpdateLane(fiber: Fiber): Lane {
   const eventPriority = getCurrentEventPriority();
   currentUpdatePriority = eventPriority;
   if (eventPriority === DefaultEventPriority) {
-    return DefaultLane;
+    return enableUnifiedSyncLane ? SyncLane : DefaultLane;
   }
   if (eventPriority === ContinuousEventPriority) {
     return InputContinuousLane;
@@ -699,8 +707,10 @@ function requestRetryLane(fiber: Fiber) {
   // Special cases
   const mode = fiber.mode;
   if ((mode & ConcurrentMode) === NoMode) {
+    currentUpdatePriority = DiscreteEventPriority;
     return (SyncLane: Lane);
   }
+  currentUpdatePriority = DefaultEventPriority;
 
   return claimNextRetryLane();
 }
@@ -845,7 +855,12 @@ export function scheduleInitialHydrationOnRoot(
   // match what was rendered on the server.
   const current = root.current;
   current.lanes = lane;
-  markRootUpdated(root, lane, eventTime, root.updatePriority);
+  markRootUpdated(
+    root,
+    lane,
+    eventTime,
+    root.tag === LegacyRoot ? DiscreteEventPriority : DefaultEventPriority,
+  );
   ensureRootIsScheduled(root, eventTime);
 }
 
@@ -892,6 +907,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
   // We use the highest priority lane to represent the priority of the callback.
   const newCallbackPriority = laneToEventPriority(
     getHighestPriorityLane(nextLanes),
+    root.updatePriority,
   );
 
   // Check if there's an existing task. We may be able to reuse it.
@@ -1006,7 +1022,7 @@ function ensureRootIsScheduled(root: FiberRoot, currentTime: number) {
     }
   } else {
     let schedulerPriorityLevel;
-    switch (lanesToEventPriority(nextLanes)) {
+    switch (lanesToEventPriority(nextLanes, root.updatePriority)) {
       case DiscreteEventPriority:
         schedulerPriorityLevel = ImmediateSchedulerPriority;
         break;
@@ -1944,7 +1960,7 @@ function renderRootSync(root: FiberRoot, lanes: Lanes) {
 
   if (__DEV__) {
     if (enableDebugTracing) {
-      logRenderStarted(lanes);
+      logRenderStarted(lanes, root.updatePriority);
     }
   }
 
@@ -2045,7 +2061,7 @@ function renderRootConcurrent(root: FiberRoot, lanes: Lanes) {
 
   if (__DEV__) {
     if (enableDebugTracing) {
-      logRenderStarted(lanes);
+      logRenderStarted(lanes, root.updatePriority);
     }
   }
 
@@ -2400,7 +2416,7 @@ function commitRootImpl(
 
   if (__DEV__) {
     if (enableDebugTracing) {
-      logCommitStarted(lanes);
+      logCommitStarted(lanes, root.updatePriority);
     }
   }
 
@@ -2496,6 +2512,7 @@ function commitRootImpl(
     }
   }
 
+  const prevRootUpdatePriority = root.updatePriority;
   // Check if there are any effects in the whole tree.
   // TODO: This is left over from the effect list implementation, where we had
   // to check for the existence of `firstEffect` to satisfy Flow. I think the
@@ -2567,7 +2584,7 @@ function commitRootImpl(
     // layout, but class component lifecycles also fire here for legacy reasons.
     if (__DEV__) {
       if (enableDebugTracing) {
-        logLayoutEffectsStarted(lanes);
+        logLayoutEffectsStarted(lanes, root.updatePriority);
       }
     }
     if (enableSchedulingProfiler) {
@@ -2696,9 +2713,11 @@ function commitRootImpl(
   // TODO: We can optimize this by not scheduling the callback earlier. Since we
   // currently schedule the callback in multiple places, will wait until those
   // are consolidated.
+  //// TODO: Need to clear the updatePriority inorder to remove the sync lane check
   if (
-    includesSomeLane(pendingPassiveEffectsLanes, SyncLane) &&
-    root.updatePriority === DiscreteEventPriority &&
+    (enableUnifiedSyncLane
+      ? prevRootUpdatePriority === DiscreteEventPriority
+      : includesSomeLane(pendingPassiveEffectsLanes, SyncLane)) &&
     root.tag !== LegacyRoot
   ) {
     flushPassiveEffects();
@@ -2706,7 +2725,7 @@ function commitRootImpl(
 
   // Read this again, since a passive effect might have updated it
   remainingLanes = root.pendingLanes;
-  if (includesSomeLane(remainingLanes, (SyncLane: Lane))) {
+  if (includesSomeLane(remainingLanes, SyncLane)) {
     if (enableProfilerTimer && enableProfilerNestedUpdatePhase) {
       markNestedUpdateScheduled();
     }
@@ -2721,6 +2740,7 @@ function commitRootImpl(
     }
   } else {
     nestedUpdateCount = 0;
+    root.updatePriority = NoEventPriority;
   }
 
   // If layout work was scheduled, flush it now.
@@ -2828,7 +2848,10 @@ export function flushPassiveEffects(): boolean {
     const remainingLanes = pendingPassiveEffectsRemainingLanes;
     pendingPassiveEffectsRemainingLanes = NoLanes;
 
-    const renderPriority = lanesToEventPriority(pendingPassiveEffectsLanes);
+    const renderPriority = lanesToEventPriority(
+      pendingPassiveEffectsLanes,
+      root.updatePriority,
+    );
     const priority = lowerEventPriority(DefaultEventPriority, renderPriority);
     const prevTransition = ReactCurrentBatchConfig.transition;
     const previousPriority = getCurrentUpdatePriority();
@@ -2889,7 +2912,7 @@ function flushPassiveEffectsImpl() {
     didScheduleUpdateDuringPassiveEffects = false;
 
     if (enableDebugTracing) {
-      logPassiveEffectsStarted(lanes);
+      logPassiveEffectsStarted(lanes, root.updatePriority);
     }
   }
 
@@ -3198,7 +3221,8 @@ function retryTimedOutBoundary(boundaryFiber: Fiber, retryLane: Lane) {
   const eventTime = requestEventTime();
   const root = enqueueConcurrentRenderForLane(boundaryFiber, retryLane);
   if (root !== null) {
-    markRootUpdated(root, retryLane, eventTime, root.updatePriority);
+    // console.log(retryLane,root.updatePriority, currentUpdatePriority, new Error().stack);
+    markRootUpdated(root, retryLane, eventTime, currentUpdatePriority);
     ensureRootIsScheduled(root, eventTime);
   }
 }

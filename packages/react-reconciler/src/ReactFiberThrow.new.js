@@ -40,6 +40,7 @@ import {
   enableDebugTracing,
   enableLazyContextPropagation,
   enableUpdaterTracking,
+  enableUnifiedSyncLane,
 } from 'shared/ReactFeatureFlags';
 import {createCapturedValueAtFiber} from './ReactCapturedValue';
 import {
@@ -77,6 +78,7 @@ import {
   markDidThrowWhileHydratingDEV,
   queueHydrationError,
 } from './ReactFiberHydrationContext.new';
+import {DiscreteEventPriority} from './ReactEventPriorities.new';
 
 function createRootErrorUpdate(
   fiber: Fiber,
@@ -421,8 +423,15 @@ function throwException(
     } else {
       // No boundary was found. Unless this is a sync update, this is OK.
       // We can suspend and wait for more data to arrive.
-
-      if (!includesSyncLane(rootRenderLanes)) {
+      if (
+        !(
+          includesSyncLane(rootRenderLanes) &&
+          !(
+            enableUnifiedSyncLane &&
+            root.updatePriority !== DiscreteEventPriority
+          )
+        )
+      ) {
         // This is not a sync update. Suspend. Since we're not activating a
         // Suspense boundary, this will unwind all the way to the root without
         // performing a second pass to render a fallback. (This is arguably how
