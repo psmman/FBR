@@ -648,7 +648,7 @@ function constructClassInstance(
     ) {
       setIsStrictModeForDevtools(true);
       try {
-        instance = new ctor(props, context); // eslint-disable-line no-new
+        instance = new ctor(props, context);
       } finally {
         setIsStrictModeForDevtools(false);
       }

@@ -1506,11 +1506,8 @@ export function discreteUpdates<A, B, C, D, R>(
 
 // Overload the definition to the two valid signatures.
 // Warning, this opts-out of checking the function body.
-// eslint-disable-next-line no-unused-vars
 declare function flushSync<R>(fn: () => R): R;
-// eslint-disable-next-line no-redeclare
 declare function flushSync(void): void;
-// eslint-disable-next-line no-redeclare
 export function flushSync<R>(fn: (() => R) | void): R | void {
   // In legacy mode, we flush pending passive effects at the beginning of the
   // next event, not at the end of the previous one.

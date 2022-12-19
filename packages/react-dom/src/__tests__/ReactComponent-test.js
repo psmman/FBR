@@ -424,7 +424,6 @@ describe('ReactComponent', () => {
       root.unmount();
     });
 
-    /* eslint-disable indent */
     expect(log).toEqual([
       'start mount',
       'inner 1 render',
@@ -453,7 +452,6 @@ describe('ReactComponent', () => {
       'ref 2 got null',
       'inner 2 componentWillUnmount',
     ]);
-    /* eslint-enable indent */
   });
 
   // @gate !disableLegacyMode
