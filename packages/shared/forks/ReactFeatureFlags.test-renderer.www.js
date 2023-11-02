@@ -82,6 +82,7 @@ export const alwaysThrottleDisappearingFallbacks = false;
 export const alwaysThrottleRetries = true;
 
 export const passChildrenWhenCloningPersistedNodes = false;
+export const enablePersistedModeClonedFlag = false;
 export const enableUseDeferredValueInitialArg = true;
 export const disableClientCache = true;
 

@@ -29,6 +29,7 @@ export const {
   enableUnifiedSyncLane,
   enableUseRefAccessWarning,
   passChildrenWhenCloningPersistedNodes,
+  enablePersistedModeClonedFlag,
   useModernStrictMode,
 } = dynamicFlags;
 

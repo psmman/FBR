@@ -19,5 +19,6 @@ declare module 'ReactNativeInternalFeatureFlags' {
   declare export var enableUnifiedSyncLane: boolean;
   declare export var enableUseRefAccessWarning: boolean;
   declare export var passChildrenWhenCloningPersistedNodes: boolean;
+  declare export var enablePersistedModeClonedFlag: boolean;
   declare export var useModernStrictMode: boolean;
 }
