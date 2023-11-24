@@ -7,7 +7,6 @@ import {
   initialize as initializeBackend,
 } from 'react-devtools-inline/backend';
 import {initialize as initializeFrontend} from 'react-devtools-inline/frontend';
-import {initDevTools} from 'react-devtools-shared/src/devtools';
 
 // This is a pretty gross hack to make the runtime loaded named-hooks-code work.
 // TODO (Webpack 5) Hoepfully we can remove this once we upgrade to Webpack 5.
@@ -16,7 +15,7 @@ __webpack_public_path__ = '/dist/'; // eslint-disable-line no-undef
 
 const iframe = ((document.getElementById('target'): any): HTMLIFrameElement);
 
-const {contentDocument, contentWindow} = iframe;
+const {contentWindow} = iframe;
 
 // Helps with positioning Overlay UI.
 contentWindow.__REACT_DEVTOOLS_TARGET_WINDOW__ = window;
@@ -25,7 +24,22 @@ initializeBackend(contentWindow);
 
 // Initialize the front end and activate the backend early so that we are able
 // to pass console settings in local storage to the backend before initial render
-const DevTools = initializeFrontend(contentWindow);
+const DevTools = initializeFrontend(contentWindow, {
+  reload(reinitializeFrontend) {
+    contentWindow.location.reload();
+    iframe.addEventListener(
+      'load',
+      () => {
+        contentWindow.__REACT_DEVTOOLS_TARGET_WINDOW__ = window;
+        initializeBackend(contentWindow);
+        reinitializeFrontend();
+        activateBackend(contentWindow);
+        inject('dist/app-index.js');
+      },
+      {once: true},
+    );
+  },
+});
 
 // Activate the backend only once the DevTools frontend Store has been initialized.
 // Otherwise the Store may miss important initial tree op codes.
@@ -60,31 +74,23 @@ function hookNamesModuleLoaderFunction() {
 }
 
 inject('dist/app-index.js', () => {
-  initDevTools({
-    connect(cb) {
-      const root = createRoot(container);
-      root.render(
-        createElement(DevTools, {
-          browserTheme: 'light',
-          enabledInspectedElementContextMenu: true,
-          hookNamesModuleLoaderFunction,
-          showTabBar: true,
-          warnIfLegacyBackendDetected: true,
-          warnIfUnsupportedVersionDetected: true,
-        }),
-      );
-    },
-
-    onReload(reloadFn) {
-      iframe.onload = reloadFn;
-    },
-  });
+  const root = createRoot(container);
+  root.render(
+    createElement(DevTools, {
+      browserTheme: 'light',
+      enabledInspectedElementContextMenu: true,
+      hookNamesModuleLoaderFunction,
+      showTabBar: true,
+      warnIfLegacyBackendDetected: true,
+      warnIfUnsupportedVersionDetected: true,
+    }),
+  );
 });
 
-function inject(sourcePath: string, callback: () => void) {
-  const script = contentDocument.createElement('script');
+function inject(sourcePath: string, callback: void | (() => void)) {
+  const script = contentWindow.document.createElement('script');
   script.onload = callback;
   script.src = sourcePath;
 
-  ((contentDocument.body: any): HTMLBodyElement).appendChild(script);
+  ((contentWindow.document.body: any): HTMLBodyElement).appendChild(script);
 }

@@ -21,6 +21,8 @@ type Config = {
   checkBridgeProtocolCompatibility?: boolean,
   supportsNativeInspection?: boolean,
   supportsProfiling?: boolean,
+  supportsReloadAndProfile?: boolean,
+  isProfiling?: boolean,
 };
 
 export function createStore(bridge: FrontendBridge, config?: Config): Store {
@@ -29,6 +31,7 @@ export function createStore(bridge: FrontendBridge, config?: Config): Store {
     supportsTraceUpdates: true,
     supportsTimeline: true,
     supportsNativeInspection: true,
+    supportsReloadAndProfile: true,
     ...config,
   });
 }
@@ -58,25 +61,47 @@ export function createBridge(contentWindow: any, wall?: Wall): FrontendBridge {
 export function initialize(
   contentWindow: any,
   {
-    bridge,
-    store,
+    createBridge: customCreateBridge,
+    createStore: customCreateStore,
+    reload,
   }: {
-    bridge?: FrontendBridge,
-    store?: Store,
+    createBridge?: () => FrontendBridge,
+    createStore?: (bridge: FrontendBridge, isProfiling: boolean) => Store,
+    reload?: (initializeFrontend: () => void) => void,
   } = {},
 ): React.AbstractComponent<Props, mixed> {
-  if (bridge == null) {
-    bridge = createBridge(contentWindow);
+  let frontendBridge: FrontendBridge;
+  let frontendStore;
+
+  function init(isProfiling: boolean) {
+    if (customCreateBridge) {
+      frontendBridge = customCreateBridge();
+    } else {
+      frontendBridge = (createBridge(contentWindow): FrontendBridge);
+    }
+    if (customCreateStore) {
+      frontendStore = customCreateStore(frontendBridge, isProfiling);
+    } else {
+      frontendStore = createStore(frontendBridge, {
+        supportsReloadAndProfile: !!reload,
+        isProfiling,
+      });
+    }
+    frontendBridge.addListener('getSavedPreferences', onGetSavedPreferences);
+
+    if (reload) {
+      frontendBridge.addListener('reloadAppForProfiling', () => {
+        frontendBridge.shutdown();
+        reload(() => {
+          init(true);
+          ReInitEvent.dispatchEvent(new Event('change'));
+        });
+      });
+    }
   }
+  init(false);
 
-  // Type refinement.
-  const frontendBridge = ((bridge: any): FrontendBridge);
-
-  if (store == null) {
-    store = createStore(frontendBridge);
-  }
-
-  const onGetSavedPreferences = () => {
+  function onGetSavedPreferences() {
     // This is the only message we're listening for,
     // so it's safe to cleanup after we've received it.
     frontendBridge.removeListener('getSavedPreferences', onGetSavedPreferences);
@@ -93,13 +118,29 @@ export function initialize(
     // because they are stored in localStorage within the context of the extension.
     // Instead it relies on the extension to pass them through.
     frontendBridge.send('savedPreferences', data);
-  };
+  }
 
-  frontendBridge.addListener('getSavedPreferences', onGetSavedPreferences);
-
-  const ForwardRef = forwardRef<Props, mixed>((props, ref) => (
-    <DevTools ref={ref} bridge={frontendBridge} store={store} {...props} />
-  ));
+  const ReInitEvent = new EventTarget();
+  const ForwardRef = forwardRef<Props, mixed>((props, ref) => {
+    const [key, setKey] = React.useState(0);
+    React.useEffect(() => {
+      function f() {
+        setKey(count => count + 1);
+      }
+      ReInitEvent.addEventListener('change', f);
+      return () => ReInitEvent.removeEventListener('change', f);
+    }, []);
+    return (
+      <DevTools
+        ref={ref}
+        // get the latest bridge and store when initCount is changed.
+        bridge={frontendBridge}
+        store={frontendStore}
+        {...props}
+        key={key}
+      />
+    );
+  });
   ForwardRef.displayName = 'DevTools';
 
   return ForwardRef;
