@@ -24,7 +24,9 @@ initializeBackend(contentWindow);
 
 // Initialize the front end and activate the backend early so that we are able
 // to pass console settings in local storage to the backend before initial render
-const DevTools = initializeFrontend(contentWindow);
+const DevTools = initializeFrontend(contentWindow, {
+  reload: () => location.reload(),
+});
 
 // Activate the backend only once the DevTools frontend Store has been initialized.
 // Otherwise the Store may miss important initial tree op codes.

@@ -62,11 +62,11 @@ export function initialize(
   {
     bridge,
     store,
-    reload = () => location.reload(),
+    reload,
   }: {
     bridge?: FrontendBridge,
     store?: Store,
-    reload?: (initializeFrontend: () => void) => void,
+    reload?: () => void,
   } = {},
 ): React.AbstractComponent<Props, mixed> {
   if (bridge == null) {
