@@ -15,7 +15,7 @@ __webpack_public_path__ = '/dist/'; // eslint-disable-line no-undef
 
 const iframe = ((document.getElementById('target'): any): HTMLIFrameElement);
 
-const {contentWindow} = iframe;
+const {contentDocument, contentWindow} = iframe;
 
 // Helps with positioning Overlay UI.
 contentWindow.__REACT_DEVTOOLS_TARGET_WINDOW__ = window;
@@ -24,22 +24,7 @@ initializeBackend(contentWindow);
 
 // Initialize the front end and activate the backend early so that we are able
 // to pass console settings in local storage to the backend before initial render
-const DevTools = initializeFrontend(contentWindow, {
-  reload(reinitializeFrontend) {
-    contentWindow.location.reload();
-    iframe.addEventListener(
-      'load',
-      () => {
-        contentWindow.__REACT_DEVTOOLS_TARGET_WINDOW__ = window;
-        initializeBackend(contentWindow);
-        reinitializeFrontend();
-        activateBackend(contentWindow);
-        inject('dist/app-index.js');
-      },
-      {once: true},
-    );
-  },
-});
+const DevTools = initializeFrontend(contentWindow);
 
 // Activate the backend only once the DevTools frontend Store has been initialized.
 // Otherwise the Store may miss important initial tree op codes.
@@ -87,10 +72,10 @@ inject('dist/app-index.js', () => {
   );
 });
 
-function inject(sourcePath: string, callback: void | (() => void)) {
-  const script = contentWindow.document.createElement('script');
+function inject(sourcePath: string, callback: () => void) {
+  const script = contentDocument.createElement('script');
   script.onload = callback;
   script.src = sourcePath;
 
-  ((contentWindow.document.body: any): HTMLBodyElement).appendChild(script);
+  ((contentDocument.body: any): HTMLBodyElement).appendChild(script);
 }
