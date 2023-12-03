@@ -25,6 +25,7 @@ initializeBackend(contentWindow);
 // Initialize the front end and activate the backend early so that we are able
 // to pass console settings in local storage to the backend before initial render
 const DevTools = initializeFrontend(contentWindow, {
+  // eslint-disable-next-line no-restricted-globals
   reload: () => location.reload(),
 });
 
