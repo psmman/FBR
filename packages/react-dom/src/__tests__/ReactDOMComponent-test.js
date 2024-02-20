@@ -3104,27 +3104,27 @@ describe('ReactDOMComponent', () => {
     it('warns on the ambiguous string value "false"', function () {
       let el;
       expect(() => {
-        el = ReactTestUtils.renderIntoDocument(<div hidden="false" />);
+        el = ReactTestUtils.renderIntoDocument(<div disabled="false" />);
       }).toErrorDev(
-        'Received the string `false` for the boolean attribute `hidden`. ' +
+        'Received the string `false` for the boolean attribute `disabled`. ' +
           'The browser will interpret it as a truthy value. ' +
-          'Did you mean hidden={false}?',
+          'Did you mean disabled={false}?',
       );
 
-      expect(el.getAttribute('hidden')).toBe('');
+      expect(el.getAttribute('disabled')).toBe('');
     });
 
     it('warns on the potentially-ambiguous string value "true"', function () {
       let el;
       expect(() => {
-        el = ReactTestUtils.renderIntoDocument(<div hidden="true" />);
+        el = ReactTestUtils.renderIntoDocument(<div disabled="true" />);
       }).toErrorDev(
-        'Received the string `true` for the boolean attribute `hidden`. ' +
+        'Received the string `true` for the boolean attribute `disabled`. ' +
           'Although this works, it will not work as expected if you pass the string "false". ' +
-          'Did you mean hidden={true}?',
+          'Did you mean disabled={true}?',
       );
 
-      expect(el.getAttribute('hidden')).toBe('');
+      expect(el.getAttribute('disabled')).toBe('');
     });
   });
 
