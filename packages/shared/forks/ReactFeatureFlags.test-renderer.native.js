@@ -49,7 +49,6 @@ export const enableUseEffectEventHook = false;
 export const enableClientRenderFallbackOnTextMismatch = true;
 export const enableUseRefAccessWarning = false;
 export const enableInfiniteRenderLoopDetection = false;
-export const enableRenderableContext = false;
 
 export const enableRetryLaneExpiration = false;
 export const retryLaneExpirationMs = 5000;
