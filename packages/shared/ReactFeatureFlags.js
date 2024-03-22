@@ -119,6 +119,12 @@ export const alwaysThrottleRetries = true;
 
 export const passChildrenWhenCloningPersistedNodes = false;
 
+/**
+ * Enables a new Fiber flag used in persisted mode to reduce the number
+ * of cloned host components.
+ */
+export const enablePersistedModeClonedFlag = false;
+
 export const enableUseDeferredValueInitialArg = __EXPERIMENTAL__;
 
 export const enableRenderableContext = false;

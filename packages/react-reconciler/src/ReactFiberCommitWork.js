@@ -42,6 +42,7 @@ import type {
 import {
   alwaysThrottleDisappearingFallbacks,
   enableCreateEventHandleAPI,
+  enablePersistedModeClonedFlag,
   enableProfilerTimer,
   enableProfilerCommitHooks,
   enableProfilerNestedUpdatePhase,
@@ -97,6 +98,7 @@ import {
   Visibility,
   ShouldSuspendCommit,
   MaySuspendCommit,
+  Cloned,
 } from './ReactFiberFlags';
 import getComponentNameFromFiber from 'react-reconciler/src/getComponentNameFromFiber';
 import {
@@ -2507,7 +2509,10 @@ function recursivelyTraverseMutationEffects(
   }
 
   const prevDebugFiber = getCurrentDebugFiberInDEV();
-  if (parentFiber.subtreeFlags & MutationMask) {
+  if (
+    parentFiber.subtreeFlags &
+    (enablePersistedModeClonedFlag ? MutationMask | Cloned : MutationMask)
+  ) {
     let child = parentFiber.child;
     while (child !== null) {
       setCurrentDebugFiberInDEV(child);
