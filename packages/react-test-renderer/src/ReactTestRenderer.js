@@ -401,6 +401,39 @@ class ReactTestInstance {
       options,
     );
   }
+
+  toJSON(): Array<ReactTestRendererNode> | ReactTestRendererNode | null {
+    // Host node
+    if (typeof this.type === 'string') {
+      return toJSON(this._fiber.stateNode);
+    }
+
+    if (this.children == null || this.children.length === 0) {
+      return null;
+    }
+
+    const renderedChildren = [];
+    for (let i = 0; i < this.children.length; i++) {
+      const child = this.children[i];
+      if (typeof child === 'string') {
+        renderedChildren.push(child);
+      } else {
+        const renderedChild = child.toJSON();
+        if (Array.isArray(renderedChild)) {
+          renderedChildren.push(...renderedChild);
+        } else if (renderedChild != null) {
+          renderedChildren.push(renderedChild);
+        }
+      }
+    }
+    if (renderedChildren.length === 0) {
+      return null;
+    }
+    if (renderedChildren.length === 1) {
+      return renderedChildren[0];
+    }
+    return renderedChildren;
+  }
 }
 
 function findAll(
