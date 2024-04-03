@@ -176,6 +176,7 @@ import {
   isPrimaryRenderer,
   getResource,
   createHoistableInstance,
+  HostTransitionContext,
 } from './ReactFiberConfig';
 import type {SuspenseInstance} from './ReactFiberConfig';
 import {shouldError, shouldSuspend} from './ReactFiberReconciler';
@@ -183,7 +184,6 @@ import {
   pushHostContext,
   pushHostContainer,
   getRootHostContainer,
-  HostTransitionContext,
 } from './ReactFiberHostContext';
 import {
   suspenseStackCursor,
