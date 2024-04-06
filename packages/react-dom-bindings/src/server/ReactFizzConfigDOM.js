@@ -1451,7 +1451,7 @@ function pushAttribute(
         // shouldRemoveAttribute
         switch (typeof value) {
           case 'function':
-          case 'symbol': // eslint-disable-line
+          case 'symbol':
             return;
           case 'boolean': {
             const prefix = attributeName.toLowerCase().slice(0, 5);

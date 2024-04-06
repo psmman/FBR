@@ -124,9 +124,7 @@ function hydrateRoot(
 // Overload the definition to the two valid signatures.
 // Warning, this opts-out of checking the function body.
 declare function flushSync<R>(fn: () => R): R;
-// eslint-disable-next-line no-redeclare
 declare function flushSync(): void;
-// eslint-disable-next-line no-redeclare
 function flushSync<R>(fn: (() => R) | void): R | void {
   if (__DEV__) {
     if (isAlreadyRendering()) {

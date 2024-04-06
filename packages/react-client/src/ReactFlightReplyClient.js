@@ -243,7 +243,6 @@ export function processReply(
             const partJSON = JSON.stringify(resolvedModel, resolveToJSON);
             // $FlowFixMe[incompatible-type] We know it's not null because we assigned it above.
             const data: FormData = formData;
-            // eslint-disable-next-line react-internal/safe-string-coercion
             data.append(formFieldPrefix + lazyId, partJSON);
             return serializeByValueID(lazyId);
           } catch (x) {
@@ -263,7 +262,6 @@ export function processReply(
                   const partJSON = JSON.stringify(value, resolveToJSON);
                   // $FlowFixMe[incompatible-type] We know it's not null because we assigned it above.
                   const data: FormData = formData;
-                  // eslint-disable-next-line react-internal/safe-string-coercion
                   data.append(formFieldPrefix + lazyId, partJSON);
                   pendingParts--;
                   if (pendingParts === 0) {
@@ -304,7 +302,6 @@ export function processReply(
               const partJSON = JSON.stringify(partValue, resolveToJSON);
               // $FlowFixMe[incompatible-type] We know it's not null because we assigned it above.
               const data: FormData = formData;
-              // eslint-disable-next-line react-internal/safe-string-coercion
               data.append(formFieldPrefix + promiseId, partJSON);
               pendingParts--;
               if (pendingParts === 0) {
@@ -459,7 +456,6 @@ export function processReply(
         }
         // The reference to this function came from the same client so we can pass it back.
         const refId = nextPartId++;
-        // eslint-disable-next-line react-internal/safe-string-coercion
         formData.set(formFieldPrefix + refId, metaDataJSON);
         return serializeServerReferenceID(refId);
       }
