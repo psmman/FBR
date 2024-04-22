@@ -673,6 +673,44 @@ describe('Shared useSyncExternalStore behavior (shim and built-in)', () => {
     assertLog([NaN]);
   });
 
+  test('selector is not called when snaphot has not changed', async () => {
+    const store = createExternalStore({a: 0});
+
+    function selector(state) {
+      Scheduler.log('Selector');
+      return state.a;
+    }
+
+    function isEqual(a, b) {
+      return a === b;
+    }
+
+    function App() {
+      Scheduler.log('App');
+      const a = useSyncExternalStoreWithSelector(
+        store.subscribe,
+        store.getState,
+        null,
+        selector,
+        isEqual,
+      );
+      return <Text text={'A' + a} />;
+    }
+
+    const container = document.createElement('div');
+    const root = createRoot(container);
+    await act(() => root.render(<App />));
+    assertLog(['App', 'Selector', 'A0']);
+
+    await act(() => store.set(store.getState()));
+    await act(() => store.set({a: 0}));
+    assertLog(['Selector']);
+
+    await act(() => store.set(store.getState()));
+    await act(() => store.set(store.getState()));
+    assertLog([]);
+  });
+
   describe('extra features implemented in user-space', () => {
     it('memoized selectors are only called once per update', async () => {
       const store = createExternalStore({a: 0, b: 0});
