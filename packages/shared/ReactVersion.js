@@ -1,3 +1,6 @@
+
+export default '18.3.0-PLACEHOLDER';
+
 /**
  * Copyright (c) Meta Platforms, Inc. and affiliates.
  *
@@ -13,3 +16,4 @@
 // at runtime. We should instead inject the version number as part of the build
 // process, and use the ReactVersions.js module as the single source of truth.
 export default '19.0.0';
+
